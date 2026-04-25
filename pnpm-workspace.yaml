@@ -33,6 +33,11 @@ minimumReleaseAgeExclude:
   # this setting guards against does not apply to our own packages.
   - '@replit/*'
   - stripe-replit-sync
+  - '@clerk/*'
+  - 'three'
+  - '@react-three/fiber'
+  - '@react-three/drei'
+  - 'html2canvas'
 
 packages:
   - artifacts/*

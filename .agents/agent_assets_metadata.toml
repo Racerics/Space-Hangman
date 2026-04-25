@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "zJqftDL3SUzwwzktWu1iG"
+uri = "file://artifacts/space-hangman/public/logo.png"
+type = "image"
+title = "Space hangman logo"

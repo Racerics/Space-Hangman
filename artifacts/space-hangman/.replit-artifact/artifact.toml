@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Space Hangman"
+version = "1.0.0"
+id = "artifacts/space-hangman"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18460
+
+[services.development]
+run = "pnpm --filter @workspace/space-hangman run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/space-hangman", "run", "build" ]
+publicDir = "artifacts/space-hangman/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18460"
+BASE_PATH = "/"

@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Space Hangman API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: scores
+    description: Score and leaderboard operations
+  - name: words
+    description: Word management for game
+  - name: daily
+    description: Daily challenge operations
 paths:
   /healthz:
     get:
@@ -24,7 +30,142 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /scores:
+    get:
+      operationId: getLeaderboard
+      tags: [scores]
+      summary: Get leaderboard
+      description: Returns the top scores for the leaderboard
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: mode
+          in: query
+          schema:
+            type: string
+            enum: [solo, daily, all]
+            default: all
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScoreEntry"
+    post:
+      operationId: submitScore
+      tags: [scores]
+      summary: Submit a score
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitScoreBody"
+      responses:
+        "201":
+          description: Score submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreEntry"
+        "401":
+          description: Unauthorized
+
+  /scores/me:
+    get:
+      operationId: getMyScores
+      tags: [scores]
+      summary: Get current user's scores
+      security:
+        - ClerkAuth: []
+      responses:
+        "200":
+          description: User's score history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScoreEntry"
+        "401":
+          description: Unauthorized
+
+  /scores/stats:
+    get:
+      operationId: getLeaderboardStats
+      tags: [scores]
+      summary: Get leaderboard statistics
+      description: Returns aggregate stats — total games played, top scorer, average score
+      responses:
+        "200":
+          description: Aggregate leaderboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaderboardStats"
+
+  /words:
+    get:
+      operationId: getWords
+      tags: [words]
+      summary: Get word list for game
+      description: Returns a set of words for the game
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Word list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WordList"
+
+  /daily:
+    get:
+      operationId: getDailyChallenge
+      tags: [daily]
+      summary: Get today's daily challenge word
+      description: Returns the current daily challenge word (same for all users)
+      responses:
+        "200":
+          description: Daily challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyChallenge"
+
+  /daily/leaderboard:
+    get:
+      operationId: getDailyLeaderboard
+      tags: [daily]
+      summary: Get today's daily challenge leaderboard
+      responses:
+        "200":
+          description: Daily leaderboard
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScoreEntry"
+
 components:
+  securitySchemes:
+    ClerkAuth:
+      type: http
+      scheme: bearer
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +175,109 @@ components:
       required:
         - status
 
+    ScoreEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        userName:
+          type: string
+        userAvatar:
+          type: string
+          nullable: true
+        score:
+          type: integer
+        streak:
+          type: integer
+        word:
+          type: string
+        mode:
+          type: string
+          enum: [solo, daily]
+        won:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - userName
+        - score
+        - streak
+        - word
+        - mode
+        - won
+        - createdAt
+
+    SubmitScoreBody:
+      type: object
+      properties:
+        score:
+          type: integer
+        streak:
+          type: integer
+        word:
+          type: string
+        mode:
+          type: string
+          enum: [solo, daily]
+        won:
+          type: boolean
+        userName:
+          type: string
+        userAvatar:
+          type: string
+          nullable: true
+      required:
+        - score
+        - streak
+        - word
+        - mode
+        - won
+        - userName
+
+    LeaderboardStats:
+      type: object
+      properties:
+        totalGames:
+          type: integer
+        topScore:
+          type: integer
+        averageScore:
+          type: number
+        totalPlayers:
+          type: integer
+      required:
+        - totalGames
+        - topScore
+        - averageScore
+        - totalPlayers
+
+    WordList:
+      type: object
+      properties:
+        words:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+      required:
+        - words
+
+    DailyChallenge:
+      type: object
+      properties:
+        word:
+          type: string
+        date:
+          type: string
+        hint:
+          type: string
+          nullable: true
+      required:
+        - word
+        - date

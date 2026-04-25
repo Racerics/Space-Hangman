@@ -1,2 +1,14 @@
 export * from "./generated/api";
-export * from "./generated/types";
+export type {
+  DailyChallenge,
+  GetLeaderboardMode,
+  GetLeaderboardParams,
+  GetWordsParams,
+  HealthStatus,
+  LeaderboardStats,
+  ScoreEntry,
+  ScoreEntryMode,
+  SubmitScoreBody,
+  SubmitScoreBodyMode,
+  WordList,
+} from "./generated/types";
