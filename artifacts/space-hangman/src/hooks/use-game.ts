@@ -1,6 +1,7 @@
 import { useReducer, useEffect } from "react";
-import { useSubmitScore } from "@workspace/api-client-react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/auth-context";
+import { firestore } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export type GameState = {
   word: string;
@@ -93,38 +94,27 @@ export function useGame(mode: "solo" | "daily") {
     won: false,
   });
 
-  const { user } = useUser();
-  const submitScore = useSubmitScore();
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (state.isGameOver && state.word) {
-      if (user?.id) {
-        submitScore.mutate({
-          data: {
-            score: state.score,
-            streak: state.streak,
-            word: state.word,
-            mode,
-            won: state.won,
-            userName: user.fullName || user.username || "Anonymous Astronaut",
-            userAvatar: user.imageUrl,
-          },
-        });
-      }
-    }
-  }, [state.isGameOver, state.won, state.score, state.streak, state.word, mode, user, submitScore]);
+    if (!state.isGameOver || !state.word || !user) return;
 
-  const setWord = (word: string) => {
-    dispatch({ type: "SET_WORD", payload: word });
-  };
+    addDoc(collection(firestore, "scores"), {
+      userId: user.uid,
+      userName: user.displayName || user.email || "Anonymous Astronaut",
+      userAvatar: user.photoURL || null,
+      score: state.score,
+      streak: state.streak,
+      word: state.word,
+      mode,
+      won: state.won,
+      createdAt: serverTimestamp(),
+    }).catch(() => {});
+  }, [state.isGameOver]);
 
-  const guess = (letter: string) => {
-    dispatch({ type: "GUESS", payload: letter });
-  };
-
-  const reset = () => {
-    dispatch({ type: "RESET" });
-  };
+  const setWord = (word: string) => dispatch({ type: "SET_WORD", payload: word });
+  const guess = (letter: string) => dispatch({ type: "GUESS", payload: letter });
+  const reset = () => dispatch({ type: "RESET" });
 
   return { state, setWord, guess, reset };
 }

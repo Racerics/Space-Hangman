@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Show } from "@clerk/react";
+import { useAuth } from "@/lib/auth-context";
 
 function StarField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -53,6 +53,7 @@ function StarField() {
 }
 
 export default function Home() {
+  const { user } = useAuth();
   return (
     <div className="relative flex-1 flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] overflow-hidden">
       <div className="absolute inset-0 z-0">
@@ -123,14 +124,14 @@ export default function Home() {
           </Button>
         </div>
 
-        <Show when="signed-out">
+        {!user && (
           <p className="mt-8 text-sm text-muted-foreground">
-            <Link href="/sign-up" className="text-primary hover:underline hover:text-primary/80 transition-colors">
-              Create an account
+            <Link href="/sign-in" className="text-primary hover:underline hover:text-primary/80 transition-colors">
+              Sign in with Google
             </Link>{" "}
             to save your scores and compete on the leaderboard.
           </p>
-        </Show>
+        )}
       </div>
     </div>
   );

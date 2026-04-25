@@ -1,9 +1,8 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GameState } from "@/hooks/use-game";
-import html2canvas from "html2canvas";
 import { Share2, Download, Trophy, Skull } from "lucide-react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/auth-context";
 
 interface ScoreCardProps {
   state: GameState;
@@ -13,17 +12,17 @@ interface ScoreCardProps {
 export function ScoreCard({ state, mode }: ScoreCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const { user } = useUser();
+  const { user } = useAuth();
 
   const handleShare = async () => {
     if (!cardRef.current) return;
     setIsExporting(true);
     try {
+      const { default: html2canvas } = await import("html2canvas");
       const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: "#0a0a0f", // Match dark theme
+        backgroundColor: "#0a0a0f",
         scale: 2,
       });
-      
       const image = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = image;
@@ -38,17 +37,29 @@ export function ScoreCard({ state, mode }: ScoreCardProps) {
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      <div 
-        ref={cardRef} 
-        className={`w-full p-6 rounded-xl border ${state.won ? "border-secondary/50 bg-secondary/10" : "border-destructive/50 bg-destructive/10"} backdrop-blur-md glow-box relative overflow-hidden`}
+      <div
+        ref={cardRef}
+        className={`w-full p-6 rounded-xl border ${state.won ? "border-secondary/50 bg-secondary/10" : "border-destructive/50 bg-destructive/10"} backdrop-blur-md relative overflow-hidden`}
+        style={{ boxShadow: state.won ? "0 0 20px rgba(34,211,238,0.2)" : "0 0 20px rgba(239,68,68,0.2)" }}
       >
-        {/* Decorative background element */}
         <div className="absolute -top-10 -right-10 opacity-20 pointer-events-none">
           {state.won ? <Trophy size={120} /> : <Skull size={120} />}
         </div>
 
         <div className="flex items-center gap-3 mb-4">
-          <img src="/logo.png" alt="Logo" className="w-8 h-8 opacity-80" />
+          <div className="w-8 h-8">
+            <svg viewBox="0 0 200 200" className="w-full h-full">
+              <defs>
+                <radialGradient id="bh-card" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="black"/>
+                  <stop offset="100%" stopColor="#6b21a8"/>
+                </radialGradient>
+              </defs>
+              <circle cx="100" cy="100" r="80" fill="#a855f720" />
+              <circle cx="100" cy="100" r="35" fill="url(#bh-card)" />
+              <circle cx="100" cy="100" r="35" fill="none" stroke="#c084fc" strokeWidth="2" />
+            </svg>
+          </div>
           <h3 className="font-mono text-sm tracking-widest uppercase text-muted-foreground">
             Transmission Log
           </h3>
@@ -57,17 +68,17 @@ export function ScoreCard({ state, mode }: ScoreCardProps) {
         <div className="space-y-4 relative z-10">
           <div>
             <p className="text-xs text-muted-foreground uppercase">Operative</p>
-            <p className="text-lg font-bold">{user?.fullName || user?.username || "Guest Operative"}</p>
+            <p className="text-lg font-bold">{user?.displayName || user?.email || "Guest Operative"}</p>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted-foreground uppercase">Score</p>
-              <p className="text-2xl font-mono text-secondary glow-text">{state.score}</p>
+              <p className="text-2xl font-mono text-secondary" style={{ textShadow: "0 0 10px currentColor" }}>{state.score}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase">Streak</p>
-              <p className="text-2xl font-mono text-primary glow-text">{state.streak}</p>
+              <p className="text-2xl font-mono text-primary" style={{ textShadow: "0 0 10px currentColor" }}>{state.streak}</p>
             </div>
           </div>
 
@@ -85,10 +96,10 @@ export function ScoreCard({ state, mode }: ScoreCardProps) {
         </div>
       </div>
 
-      <Button 
-        onClick={handleShare} 
+      <Button
+        onClick={handleShare}
         disabled={isExporting}
-        variant="outline" 
+        variant="outline"
         className="w-full flex items-center gap-2 border-primary/30 hover:bg-primary/20 text-primary"
       >
         {isExporting ? <Download className="w-4 h-4 animate-bounce" /> : <Share2 className="w-4 h-4" />}
