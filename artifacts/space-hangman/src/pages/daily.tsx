@@ -23,26 +23,29 @@ export default function DailyChallenge() {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
+    // Single orderBy to avoid composite index requirement
     const q = query(
       collection(firestore, "scores"),
       where("mode", "==", "daily"),
       where("createdAt", ">=", Timestamp.fromDate(startOfDay)),
       orderBy("createdAt", "desc"),
-      orderBy("score", "desc"),
-      limit(20),
+      limit(50),
     );
 
     getDocs(q).then((snap) => {
-      setLeaderboard(snap.docs.map((doc) => {
+      const entries = snap.docs.map((doc) => {
         const d = doc.data();
         return {
           id: doc.id,
           userName: d.userName,
           userAvatar: d.userAvatar ?? null,
-          score: d.score,
-          streak: d.streak,
+          score: d.score as number,
+          streak: d.streak as number,
         };
-      }));
+      });
+      // Sort by score descending client-side (avoids composite index)
+      entries.sort((a, b) => b.score - a.score);
+      setLeaderboard(entries.slice(0, 20));
       setIsLoading(false);
     }).catch(() => setIsLoading(false));
   }, []);

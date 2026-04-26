@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useGame } from "@/hooks/use-game";
 import { useGetWords, useGetDailyChallenge } from "@workspace/api-client-react";
 import { Keyboard } from "@/components/keyboard";
@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 
 export default function GamePage({ mode = "solo" }: { mode?: "solo" | "daily" }) {
   const { state, setWord, guess, reset } = useGame(mode);
-  
+
   const wordsQuery = useGetWords({}, { query: { enabled: mode === "solo" } });
   const dailyQuery = useGetDailyChallenge({ query: { enabled: mode === "daily" } });
 
@@ -29,6 +29,19 @@ export default function GamePage({ mode = "solo" }: { mode?: "solo" | "daily" })
       }
     }
   }, [mode, wordsQuery.data, dailyQuery.data, state.word, state.isGameOver, setWord]);
+
+  // Physical keyboard support
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (state.isGameOver) return;
+    if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+      guess(e.key);
+    }
+  }, [state.isGameOver, guess]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   const handleNextGame = () => {
     reset();
@@ -52,16 +65,18 @@ export default function GamePage({ mode = "solo" }: { mode?: "solo" | "daily" })
 
   return (
     <div className="flex-1 flex flex-col md:flex-row p-4 gap-8 max-w-7xl mx-auto w-full mt-8">
-      {/* Game Info & Interactions */}
       <div className="flex-1 flex flex-col items-center gap-8 justify-center">
         <div className="w-full flex justify-between items-center px-4 py-2 border border-border/50 bg-card/50 backdrop-blur rounded-lg shadow-lg">
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground uppercase tracking-widest">Score</span>
-            <span className="text-2xl font-mono text-secondary glow-text">{state.score}</span>
+            <span className="text-2xl font-mono text-secondary">{state.score}</span>
+          </div>
+          <div className="text-xs text-muted-foreground uppercase tracking-widest text-center">
+            Wrong: {state.wrong} / 6
           </div>
           <div className="flex flex-col items-end">
             <span className="text-xs text-muted-foreground uppercase tracking-widest">Streak</span>
-            <span className="text-2xl font-mono text-primary glow-text">{state.streak}</span>
+            <span className="text-2xl font-mono text-primary">{state.streak}</span>
           </div>
         </div>
 
@@ -70,17 +85,21 @@ export default function GamePage({ mode = "solo" }: { mode?: "solo" | "daily" })
         <div className="w-full max-w-3xl">
           <Keyboard guessed={state.guessed} word={state.word} onGuess={guess} disabled={state.isGameOver} />
         </div>
+        <p className="text-xs text-muted-foreground">You can also type using your keyboard</p>
       </div>
 
-      {/* Visuals */}
-      <div className="w-full md:w-[400px] lg:w-[500px] h-[400px] md:h-auto border border-border/30 rounded-xl overflow-hidden relative glow-box bg-black/40">
+      <div className="w-full md:w-[400px] lg:w-[480px] h-[380px] md:h-auto border border-border/30 rounded-xl overflow-hidden relative bg-black/40" style={{ boxShadow: "0 0 20px rgba(138,43,226,0.2)" }}>
         <BlackHole wrongGuesses={state.wrong} isGameOver={state.isGameOver} won={state.won} />
-        
+
         {state.isGameOver && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-10 animate-in fade-in zoom-in duration-500">
+          <div className="absolute inset-0 bg-background/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-10 animate-in fade-in zoom-in duration-500">
             <ScoreCard state={state} mode={mode} />
             {mode === "solo" ? (
-              <Button onClick={handleNextGame} className="mt-6 w-full max-w-sm glow-box hover:bg-primary/90 transition-all text-white font-bold">
+              <Button
+                onClick={handleNextGame}
+                className="mt-6 w-full max-w-sm hover:bg-primary/90 transition-all text-white font-bold"
+                style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 0 15px rgba(168,85,247,0.4)" }}
+              >
                 INITIATE NEXT SEQUENCE
               </Button>
             ) : (

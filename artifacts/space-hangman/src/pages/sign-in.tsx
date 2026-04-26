@@ -1,10 +1,11 @@
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export default function SignInPage() {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, authError, signInWithGoogle } = useAuth();
+  const [signingIn, setSigningIn] = useState(false);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -45,8 +46,19 @@ export default function SignInPage() {
               </p>
             </div>
 
+            {authError && (
+              <p className="text-sm text-destructive text-center bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
+                {authError}
+              </p>
+            )}
+
             <Button
-              onClick={signInWithGoogle}
+              onClick={async () => {
+                setSigningIn(true);
+                await signInWithGoogle();
+                setSigningIn(false);
+              }}
+              disabled={signingIn}
               className="w-full flex items-center gap-3 h-12 text-base font-semibold"
               style={{
                 background: "linear-gradient(135deg, #7c3aed, #a855f7)",

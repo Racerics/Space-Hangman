@@ -1,4 +1,4 @@
-import { useReducer, useEffect } from "react";
+import { useReducer, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { firestore } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -18,7 +18,7 @@ type Action =
   | { type: "GUESS"; payload: string }
   | { type: "RESET" };
 
-const MAX_WRONG = 6;
+export const MAX_WRONG = 6;
 
 function gameReducer(state: GameState, action: Action): GameState {
   switch (action.type) {
@@ -83,37 +83,66 @@ function gameReducer(state: GameState, action: Action): GameState {
   }
 }
 
-export function useGame(mode: "solo" | "daily") {
-  const [state, dispatch] = useReducer(gameReducer, {
-    word: "",
-    guessed: [],
-    wrong: 0,
-    score: 0,
-    streak: 0,
-    isGameOver: false,
-    won: false,
-  });
+const INITIAL_STATE: GameState = {
+  word: "",
+  guessed: [],
+  wrong: 0,
+  score: 0,
+  streak: 0,
+  isGameOver: false,
+  won: false,
+};
 
+export function useGame(mode: "solo" | "daily") {
+  const [state, dispatch] = useReducer(gameReducer, INITIAL_STATE);
   const { user } = useAuth();
 
+  // Use a ref to avoid stale closures on game-over submission
+  const stateRef = useRef(state);
+  const userRef = useRef(user);
+  const scoreSentRef = useRef(false);
+
+  useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => { userRef.current = user; }, [user]);
+
+  // Reset score-sent flag when a new word starts
   useEffect(() => {
-    if (!state.isGameOver || !state.word || !user) return;
+    if (state.word && !state.isGameOver) {
+      scoreSentRef.current = false;
+    }
+  }, [state.word, state.isGameOver]);
+
+  // Submit score to Firestore once per game, only when signed in
+  useEffect(() => {
+    if (!state.isGameOver || !state.word || scoreSentRef.current) return;
+    if (!userRef.current) return;
+
+    scoreSentRef.current = true;
+    const { word, score, streak, won } = stateRef.current;
+    const u = userRef.current;
 
     addDoc(collection(firestore, "scores"), {
-      userId: user.uid,
-      userName: user.displayName || user.email || "Anonymous Astronaut",
-      userAvatar: user.photoURL || null,
-      score: state.score,
-      streak: state.streak,
-      word: state.word,
+      userId: u.uid,
+      userName: u.displayName || u.email || "Anonymous Astronaut",
+      userAvatar: u.photoURL || null,
+      score,
+      streak,
+      word,
       mode,
-      won: state.won,
+      won,
       createdAt: serverTimestamp(),
     }).catch(() => {});
-  }, [state.isGameOver]);
+  }, [state.isGameOver, mode]);
 
-  const setWord = (word: string) => dispatch({ type: "SET_WORD", payload: word });
-  const guess = (letter: string) => dispatch({ type: "GUESS", payload: letter });
+  const setWord = (word: string) => {
+    if (word) dispatch({ type: "SET_WORD", payload: word });
+  };
+
+  const guess = (letter: string) => {
+    const l = letter.toUpperCase();
+    if (/^[A-Z]$/.test(l)) dispatch({ type: "GUESS", payload: l });
+  };
+
   const reset = () => dispatch({ type: "RESET" });
 
   return { state, setWord, guess, reset };
